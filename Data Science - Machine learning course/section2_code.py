@@ -144,3 +144,41 @@ print('Male accuracy: %f' %(confusion_matrix['P = Male, A = Male']/(confusion_ma
 print('TPR = %f' %(confusion_matrix['P = Male, A = Male']/(confusion_matrix['P = Male, A = Male']+confusion_matrix['P = Female, A = Male'])))
 print('TNR = %f' %(confusion_matrix['P = Female, A = Female']/(confusion_matrix['P = Female, A = Female']+confusion_matrix['P = Male, A = Female'])))
 print('PPV = %f' %(confusion_matrix['P = Male, A = Male']/(confusion_matrix['P = Male, A = Male']+confusion_matrix['P = Male, A = Female'])))
+
+#calculate F1 score
+recall = confusion_matrix['P = Male, A = Male']/(confusion_matrix['P = Male, A = Male']+confusion_matrix['P = Female, A = Male'])
+precision = confusion_matrix['P = Male, A = Male']/(confusion_matrix['P = Male, A = Male']+confusion_matrix['P = Male, A = Female'])
+
+print('F1 score = %f' %(2*(precision*recall)/(recall+precision)))
+
+#training algorithm 2 again but based on the F-score
+
+all_confusion_matrix = {}
+all_recall={}
+all_precision={}
+all_f1_score ={}
+
+for j in [0.5,1,1.5,2,2.5,3]:
+	all_confusion_matrix[j] = {'P = Male, A = Male':0,'P = Male, A = Female':0,'P = Female, A = Male':0,'P = Female, A = Female':0}
+	for i in range(5000):
+		if y_hat_dummy[j][i]==1 and y_train_dummy[i]==1:
+			all_confusion_matrix[j]['P = Male, A = Male']+=1
+		elif y_hat_dummy[j][i]==1 and y_train_dummy[i]==0:
+			all_confusion_matrix[j]['P = Male, A = Female']+=1
+		elif y_hat_dummy[j][i]==0 and y_train_dummy[i]==1:
+			all_confusion_matrix[j]['P = Female, A = Male']+=1
+		else:
+			all_confusion_matrix[j]['P = Female, A = Female']+=1
+	all_recall[j] = all_confusion_matrix[j]['P = Male, A = Male']/(all_confusion_matrix[j]['P = Male, A = Male']+all_confusion_matrix[j]['P = Female, A = Male'])
+	all_precision[j] = all_confusion_matrix[j]['P = Male, A = Male']/(all_confusion_matrix[j]['P = Male, A = Male']+all_confusion_matrix[j]['P = Male, A = Female'])
+	all_f1_score[j] = 2*(all_precision[j]*all_recall[j])/(all_recall[j]+all_precision[j])
+	
+#plot f1_scores
+
+f1_scores = sorted(all_f1_score.items()) # sorted by key, return a list of tuples
+x2, y2 = zip(*f1_scores) # unpack a list of pairs into two tuples
+
+plt.plot(x2, y2)
+plt.show()
+
+#the best algorithm is still the one that uses 1.5 standard deviations. This was expected since the dataset is balanced
