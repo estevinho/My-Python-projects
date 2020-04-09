@@ -157,6 +157,7 @@ all_confusion_matrix = {}
 all_recall={}
 all_precision={}
 all_f1_score ={}
+all_FPR={}
 
 for j in [0.5,1,1.5,2,2.5,3]:
 	all_confusion_matrix[j] = {'P = Male, A = Male':0,'P = Male, A = Female':0,'P = Female, A = Male':0,'P = Female, A = Female':0}
@@ -172,6 +173,7 @@ for j in [0.5,1,1.5,2,2.5,3]:
 	all_recall[j] = all_confusion_matrix[j]['P = Male, A = Male']/(all_confusion_matrix[j]['P = Male, A = Male']+all_confusion_matrix[j]['P = Female, A = Male'])
 	all_precision[j] = all_confusion_matrix[j]['P = Male, A = Male']/(all_confusion_matrix[j]['P = Male, A = Male']+all_confusion_matrix[j]['P = Male, A = Female'])
 	all_f1_score[j] = 2*(all_precision[j]*all_recall[j])/(all_recall[j]+all_precision[j])
+	all_FPR[j] = all_confusion_matrix[j]['P = Male, A = Female']/(all_confusion_matrix[j]['P = Male, A = Female']+all_confusion_matrix[j]['P = Female, A = Female'])
 	
 #plot f1_scores
 
@@ -179,6 +181,35 @@ f1_scores = sorted(all_f1_score.items()) # sorted by key, return a list of tuple
 x2, y2 = zip(*f1_scores) # unpack a list of pairs into two tuples
 
 plt.plot(x2, y2)
+plt.xlabel('algorithm ID')
+plt.ylabel('F1-score')
+plt.title('F1-scores')
 plt.show()
 
 #the best algorithm is still the one that uses 1.5 standard deviations. This was expected since the dataset is balanced
+
+#plot the ROC curve for the previous algorithms
+x3 = all_FPR.values()
+y3 = all_recall.values()
+
+plt.plot(x3, y3)
+plt.xlabel('FPR')
+plt.ylabel('TPR')
+plt.title('ROC curve')
+for j in [0.5,1,1.5,2,2.5,3]:
+	plt.text(all_FPR[j],all_recall[j],j)
+plt.show()
+
+#the ROC curve shows that this classifier is better than the random classifier (straight line with slope 1)
+
+#precision-recall plot
+x4 = all_recall.values()
+y4 = all_precision.values()
+
+plt.plot(x4, y4)
+plt.xlabel('recall')
+plt.ylabel('precision')
+plt.title('precision-recall plot')
+for j in [0.5,1,1.5,2,2.5,3]:
+	plt.text(all_recall[j],all_precision[j],j)
+plt.show()
