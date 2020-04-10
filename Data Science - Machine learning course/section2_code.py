@@ -1,6 +1,9 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split
 import matplotlib.pylab as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
+
 
 data = pd.read_csv('weight-height.csv')
 
@@ -213,3 +216,112 @@ plt.title('precision-recall plot')
 for j in [0.5,1,1.5,2,2.5,3]:
 	plt.text(all_recall[j],all_precision[j],j)
 plt.show()
+
+#section 3 - linear regression for categorical data
+#transform gender in a dummy variable
+def create_dummies(df,column_name):
+	"""Create Dummy Columns (One Hot Encoding) from a single Column
+
+	Usage
+	------
+	train = create_dummies(train,"category")
+	"""
+	dummies = pd.get_dummies(df[column_name],prefix=column_name)
+	df = pd.concat([df,dummies],axis=1)
+	return df
+	
+train = create_dummies(train,'Gender') #use 'Gender_female' to keep consistency with course
+test = create_dummies(test,'Gender')
+
+#probability of being female given that 66 inches tall
+train_66 = train[round(train['Height'])==66]
+print(train_66)
+print(train_66['Gender_Female'].mean())
+
+#study previous for several values
+female_prob = {}
+for h in range(60,76):
+	female_prob[h] = train[round(train['Height'])== h]['Gender_Female'].mean()
+
+print(female_prob)
+#plot probability of being female for different height values
+listf = sorted(female_prob.items()) # sorted by key, return a list of tuples
+xf, yf = zip(*listf) # unpack a list of pairs into two tuples
+
+plt.plot(xf, yf)
+plt.xlabel('Height in inches')
+plt.ylabel('Probability')
+plt.title('Conditional probability of being female')
+plt.show()
+
+#fit a linear regression to the data
+reg_female = LinearRegression().fit(train['Height'].reshape(-1,1), train['Gender_Female'])
+
+print('Intercept: %f' %reg_female.intercept_)
+print('Coefficient: %f' %reg_female.coef_)
+
+#predict female if conditional probability estimated by regression is above 50%
+y_female = reg_female.predict(test['Height'].values.reshape(-1,1))
+
+y_binary = []
+for y in y_female:
+	if y > 0.5:
+		y_binary.append(1)
+	else:
+		y_binary.append(0)
+
+#evaluate model
+cm_regression = {'P = Male, A = Male':0,'P = Male, A = Female':0,'P = Female, A = Male':0,'P = Female, A = Female':0}
+for i in range(5000):#dummy variables coded in inverse order
+	if y_binary[i]==1 and y_test_dummy[i]==0:
+		cm_regression['P = Female, A = Female']+=1
+	elif y_binary[i]==1 and y_test_dummy[i]==1:
+		cm_regression['P = Female, A = Male']+=1
+	elif y_binary[i]==0 and y_test_dummy[i]==0:
+		cm_regression['P = Male, A = Female']+=1
+	else:
+		cm_regression['P = Male, A = Male']+=1
+
+print(cm_regression)		
+
+print('Accuracy: %f' %((cm_regression['P = Female, A = Female']+cm_regression['P = Male, A = Male'])/5000))
+
+recall = cm_regression['P = Female, A = Female']/(cm_regression['P = Female, A = Female']+cm_regression['P = Male, A = Female'])
+precision = cm_regression['P = Female, A = Female']/(cm_regression['P = Female, A = Female']+cm_regression['P = Female, A = Male'])
+
+print('Recall = %f' %recall)
+print('Precision = %f' %precision)
+print('F1 score = %f' %(2*(precision*recall)/(recall+precision)))
+
+#this is the best model so far
+
+#fit a logistic regression to the data
+log_reg = LogisticRegression().fit(train['Height'].values.reshape(-1,1), train['Gender_Female'])
+
+#obtain the predictions
+log_y = log_reg.predict(test['Height'].values.reshape(-1,1))
+
+#evaluate model
+cm_log_reg = {'P = Male, A = Male':0,'P = Male, A = Female':0,'P = Female, A = Male':0,'P = Female, A = Female':0}
+for i in range(5000):#dummy variables coded in inverse order
+	if log_y[i]==1 and y_test_dummy[i]==0:
+		cm_log_reg['P = Female, A = Female']+=1
+	elif log_y[i]==1 and y_test_dummy[i]==1:
+		cm_log_reg['P = Female, A = Male']+=1
+	elif log_y[i]==0 and y_test_dummy[i]==0:
+		cm_log_reg['P = Male, A = Female']+=1
+	else:
+		cm_log_reg['P = Male, A = Male']+=1
+
+print(cm_log_reg)		
+
+print('Accuracy: %f' %((cm_log_reg['P = Female, A = Female']+cm_log_reg['P = Male, A = Male'])/5000))
+
+log_recall = cm_log_reg['P = Female, A = Female']/(cm_log_reg['P = Female, A = Female']+cm_log_reg['P = Male, A = Female'])
+log_precision = cm_log_reg['P = Female, A = Female']/(cm_log_reg['P = Female, A = Female']+cm_log_reg['P = Female, A = Male'])
+
+print('Recall = %f' %log_recall)
+print('Precision = %f' %log_precision)
+print('F1 score = %f' %(2*(log_precision*log_recall)/(log_recall+log_precision)))
+
+#similar performance to linear regression
