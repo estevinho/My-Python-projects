@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import cross_val_predict
 
 
 data = pd.read_csv('weight-height.csv')
@@ -391,3 +392,37 @@ plt.title('Overall accuracy per n_neighbours')
 plt.show()
 
 #best value of k seems to be around 10, but better to select with cross-validation
+
+#repeat previous but using cross-validation
+#plot accuracy vs k to pick the best value of k
+knn_accuracy = {}
+for k in [3,5,7,10,12,15,20,25,30,35,45,50,75,100,150,200]:
+	#fit the k-nearest neighbours algorithm
+	#knn = KNeighborsClassifier(n_neighbors=k).fit(train['Height'].values.reshape(-1,1), train['Gender_Female'])
+
+	#obtain the predictions
+	knn_y = cross_val_predict(KNeighborsClassifier(n_neighbors=k),train['Height'].values.reshape(-1,1),y=train['Gender_Female'],cv=5)
+
+	#evaluate model
+	cm_knn = {'P = Male, A = Male':0,'P = Male, A = Female':0,'P = Female, A = Male':0,'P = Female, A = Female':0}
+	for i in range(5000):#dummy variables coded in inverse order
+		if knn_y[i]==1 and y_test_dummy[i]==0:
+			cm_knn['P = Female, A = Female']+=1
+		elif knn_y[i]==1 and y_test_dummy[i]==1:
+			cm_knn['P = Female, A = Male']+=1
+		elif log_y[i]==0 and y_test_dummy[i]==0:
+			cm_knn['P = Male, A = Female']+=1
+		else:
+			cm_knn['P = Male, A = Male']+=1	
+	knn_accuracy[k] = (cm_knn['P = Female, A = Female']+cm_knn['P = Male, A = Male'])/5000
+	
+list = sorted(knn_accuracy.items()) # sorted by key, return a list of tuples
+x, y = zip(*list) # unpack a list of pairs into two tuples
+
+plt.plot(x, y)
+plt.xlabel('n_neighbours')
+plt.ylabel('accuracy')
+plt.title('Overall accuracy per n_neighbours with cross-validation')
+plt.show()
+
+#using cross-validation, the best k seems to be 12, but accuracy much lower now for all values of k
