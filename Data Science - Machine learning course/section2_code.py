@@ -236,7 +236,7 @@ test = create_dummies(test,'Gender')
 
 #probability of being female given that 66 inches tall
 train_66 = train[round(train['Height'])==66]
-print(train_66)
+#print(train_66)
 print(train_66['Gender_Female'].mean())
 
 #study previous for several values
@@ -328,7 +328,7 @@ print('Log Reg F1 score = %f' %(2*(log_precision*log_recall)/(log_recall+log_pre
 #similar performance to linear regression
 
 #fit the k-nearest neighbours algorithm
-knn = KNeighborsClassifier().fit(train['Height'].values.reshape(-1,1), train['Gender_Female']) #using default k=5
+knn = KNeighborsClassifier(n_neighbors=400).fit(train['Height'].values.reshape(-1,1), train['Gender_Female']) #using default k=5
 
 #obtain the predictions
 knn_y = knn.predict(test['Height'].values.reshape(-1,1))
@@ -356,4 +356,38 @@ print('Knn Recall = %f' %knn_recall)
 print('Knn Precision = %f' %knn_precision)
 print('Knn F1 score = %f' %(2*(knn_precision*knn_recall)/(knn_recall+knn_precision)))
 
-#overall accuracy slightly better than logistic regression
+#overall accuracy slightly better than logistic regression for k = 5 (0.841), some evidence of overfitting
+#using k=400, overall accuracy is very similar to logistic regression, not enough flexibility, oversmoothing
+
+#plot accuracy vs k to pick the best value of k
+knn_accuracy = {}
+for k in [3,5,7,10,12,15,20,25,30,35,45,50,75,100,150,200]:
+	#fit the k-nearest neighbours algorithm
+	knn = KNeighborsClassifier(n_neighbors=k).fit(train['Height'].values.reshape(-1,1), train['Gender_Female'])
+
+	#obtain the predictions
+	knn_y = knn.predict(test['Height'].values.reshape(-1,1))
+
+	#evaluate model
+	cm_knn = {'P = Male, A = Male':0,'P = Male, A = Female':0,'P = Female, A = Male':0,'P = Female, A = Female':0}
+	for i in range(5000):#dummy variables coded in inverse order
+		if knn_y[i]==1 and y_test_dummy[i]==0:
+			cm_knn['P = Female, A = Female']+=1
+		elif knn_y[i]==1 and y_test_dummy[i]==1:
+			cm_knn['P = Female, A = Male']+=1
+		elif log_y[i]==0 and y_test_dummy[i]==0:
+			cm_knn['P = Male, A = Female']+=1
+		else:
+			cm_knn['P = Male, A = Male']+=1	
+	knn_accuracy[k] = (cm_knn['P = Female, A = Female']+cm_knn['P = Male, A = Male'])/5000
+	
+list = sorted(knn_accuracy.items()) # sorted by key, return a list of tuples
+x, y = zip(*list) # unpack a list of pairs into two tuples
+
+plt.plot(x, y)
+plt.xlabel('n_neighbours')
+plt.ylabel('accuracy')
+plt.title('Overall accuracy per n_neighbours')
+plt.show()
+
+#best value of k seems to be around 10, but better to select with cross-validation
