@@ -3,6 +3,7 @@ import matplotlib.pylab as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
 
 
 data = pd.read_csv('weight-height.csv')
@@ -315,13 +316,44 @@ for i in range(5000):#dummy variables coded in inverse order
 
 print(cm_log_reg)		
 
-print('Accuracy: %f' %((cm_log_reg['P = Female, A = Female']+cm_log_reg['P = Male, A = Male'])/5000))
+print('Log Reg Accuracy: %f' %((cm_log_reg['P = Female, A = Female']+cm_log_reg['P = Male, A = Male'])/5000))
 
 log_recall = cm_log_reg['P = Female, A = Female']/(cm_log_reg['P = Female, A = Female']+cm_log_reg['P = Male, A = Female'])
 log_precision = cm_log_reg['P = Female, A = Female']/(cm_log_reg['P = Female, A = Female']+cm_log_reg['P = Female, A = Male'])
 
-print('Recall = %f' %log_recall)
-print('Precision = %f' %log_precision)
-print('F1 score = %f' %(2*(log_precision*log_recall)/(log_recall+log_precision)))
+print('Log Reg Recall = %f' %log_recall)
+print('Log Reg Precision = %f' %log_precision)
+print('Log Reg F1 score = %f' %(2*(log_precision*log_recall)/(log_recall+log_precision)))
 
 #similar performance to linear regression
+
+#fit the k-nearest neighbours algorithm
+knn = KNeighborsClassifier().fit(train['Height'].values.reshape(-1,1), train['Gender_Female']) #using default k=5
+
+#obtain the predictions
+knn_y = knn.predict(test['Height'].values.reshape(-1,1))
+
+#evaluate model
+cm_knn = {'P = Male, A = Male':0,'P = Male, A = Female':0,'P = Female, A = Male':0,'P = Female, A = Female':0}
+for i in range(5000):#dummy variables coded in inverse order
+	if knn_y[i]==1 and y_test_dummy[i]==0:
+		cm_knn['P = Female, A = Female']+=1
+	elif knn_y[i]==1 and y_test_dummy[i]==1:
+		cm_knn['P = Female, A = Male']+=1
+	elif log_y[i]==0 and y_test_dummy[i]==0:
+		cm_knn['P = Male, A = Female']+=1
+	else:
+		cm_knn['P = Male, A = Male']+=1
+
+print(cm_knn)		
+
+print('knn accuracy: %f' %((cm_knn['P = Female, A = Female']+cm_knn['P = Male, A = Male'])/5000))
+
+knn_recall = cm_knn['P = Female, A = Female']/(cm_knn['P = Female, A = Female']+cm_knn['P = Male, A = Female'])
+knn_precision = cm_knn['P = Female, A = Female']/(cm_knn['P = Female, A = Female']+cm_knn['P = Female, A = Male'])
+
+print('Knn Recall = %f' %knn_recall)
+print('Knn Precision = %f' %knn_precision)
+print('Knn F1 score = %f' %(2*(knn_precision*knn_recall)/(knn_recall+knn_precision)))
+
+#overall accuracy slightly better than logistic regression
