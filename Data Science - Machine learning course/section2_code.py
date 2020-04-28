@@ -5,6 +5,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import cross_val_predict
+from scipy.stats import norm
 
 
 data = pd.read_csv('weight-height.csv')
@@ -426,3 +427,22 @@ plt.title('Overall accuracy per n_neighbours with cross-validation')
 plt.show()
 
 #using cross-validation, the best k seems to be 12, but accuracy much lower now for all values of k
+
+#Naive Bayes approach
+male_mean = train.groupby('Gender')['Height'].mean()['Male']
+male_std = train.groupby('Gender')['Height'].std()['Male']
+female_mean = train.groupby('Gender')['Height'].mean()['Female']
+female_std = train.groupby('Gender')['Height'].std()['Female']
+female_p = train.groupby('Gender')['Height'].count()['Female']/5000
+
+f_male = norm.pdf(test['Height'],loc=male_mean, scale=male_std)
+f_female = norm.pdf(test['Height'],loc=female_mean, scale=female_std) 
+
+p_hat_Bayes = f_female*female_p/(f_female*female_p+f_male*(1-female_p)) #Naive Bayes estimate of conditional probability
+#if the sample is biased, instead of using the estimated female_p (prevalence), we can force it to be balanced (0.5)
+
+plt.scatter(test['Height'], p_hat_Bayes)
+plt.xlabel('Height')
+plt.ylabel('Probability of being female')
+plt.title('Naive Bayes estimates')
+plt.show()
